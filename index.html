@@ -3,31 +3,62 @@
 <head>
   <meta charset="UTF-8">
   <title>Selecciona Estación Adif</title>
+  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    #selectorEstaciones {
+      width: 300px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Selecciona una Estación de Adif</h1>
+  <select id="selectorEstaciones" placeholder="Busca una estación..."></select>
+  <button onclick="irAEstacion()">Ir a la información</button>
+
+  <!-- PapaParse para leer CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- Tom Select para buscador -->
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
   <script>
     async function cargarEstaciones() {
       const urlCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQtkTqrlMpZBCZIpFfVfsx3MBhmJjwfl2a1fNlswEu_A1s5JLKCKOIdhkLH1WXOvQ/pub?output=csv";
+
       const response = await fetch(urlCSV);
-      const texto = await response.text();
-      const lineas = texto.trim().split("\n");
-      const encabezados = lineas[0].split(",");
+      const csvText = await response.text();
 
-      const longNameIndex = encabezados.indexOf("longName");
-      const stationCodeIndex = encabezados.indexOf("stationCode");
-
-      const estaciones = lineas.slice(1).map(linea => {
-        const campos = linea.split(",");
-        return {
-          nombre: campos[longNameIndex],
-          codigo: campos[stationCodeIndex]
-        };
+      const parsed = Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true
       });
 
+      const estaciones = parsed.data;
+
       const select = document.getElementById("selectorEstaciones");
+
       estaciones.forEach(estacion => {
-        const opcion = document.createElement("option");
-        opcion.value = estacion.codigo;
-        opcion.textContent = estacion.nombre;
-        select.appendChild(opcion);
+        if (estacion.longName && estacion.stationCode) {
+          const option = document.createElement("option");
+          option.value = estacion.stationCode;
+          option.textContent = estacion.longName;
+          select.appendChild(option);
+        }
+      });
+
+      // Activar Tom Select con búsqueda
+      new TomSelect(select, {
+        create: false,
+        sortField: {
+          field: "text",
+          direction: "asc"
+        }
       });
     }
 
@@ -41,12 +72,5 @@
 
     window.onload = cargarEstaciones;
   </script>
-</head>
-<body>
-  <h1>Selecciona una Estación de Adif</h1>
-  <select id="selectorEstaciones">
-    <option value="">-- Selecciona una estación --</option>
-  </select>
-  <button onclick="irAEstacion()">Ir a la información</button>
 </body>
 </html>
