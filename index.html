@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Selecciona Estación Adif</title>
+  <script>
+    async function cargarEstaciones() {
+      const urlCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQtkTqrlMpZBCZIpFfVfsx3MBhmJjwfl2a1fNlswEu_A1s5JLKCKOIdhkLH1WXOvQ/pub?output=csv";
+      const response = await fetch(urlCSV);
+      const texto = await response.text();
+      const lineas = texto.trim().split("\n");
+      const encabezados = lineas[0].split(",");
+
+      const longNameIndex = encabezados.indexOf("longName");
+      const stationCodeIndex = encabezados.indexOf("stationCode");
+
+      const estaciones = lineas.slice(1).map(linea => {
+        const campos = linea.split(",");
+        return {
+          nombre: campos[longNameIndex],
+          codigo: campos[stationCodeIndex]
+        };
+      });
+
+      const select = document.getElementById("selectorEstaciones");
+      estaciones.forEach(estacion => {
+        const opcion = document.createElement("option");
+        opcion.value = estacion.codigo;
+        opcion.textContent = estacion.nombre;
+        select.appendChild(opcion);
+      });
+    }
+
+    function irAEstacion() {
+      const select = document.getElementById("selectorEstaciones");
+      const codigo = select.value;
+      if (codigo) {
+        window.location.href = `https://info.adif.es/?s=${codigo}`;
+      }
+    }
+
+    window.onload = cargarEstaciones;
+  </script>
+</head>
+<body>
+  <h1>Selecciona una Estación de Adif</h1>
+  <select id="selectorEstaciones">
+    <option value="">-- Selecciona una estación --</option>
+  </select>
+  <button onclick="irAEstacion()">Ir a la información</button>
+</body>
+</html>
