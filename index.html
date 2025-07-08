@@ -1,158 +1,76 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Selector de Estaciones de Adif</title>
-    
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f2f5;
-            color: #333;
-        }
-
-        .container {
-            background-color: #ffffff;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            max-width: 500px;
-            width: 90%;
-        }
-
-        h1 {
-            color: #00529B; /* Azul corporativo de Adif */
-            margin-bottom: 10px;
-        }
-
-        p {
-            color: #555;
-            margin-bottom: 30px;
-        }
-
-        .selector-container {
-            margin-bottom: 20px;
-        }
-
-        label {
-            font-weight: bold;
-            margin-right: 10px;
-        }
-
-        #station-select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            box-sizing: border-box;
-        }
-
-        button {
-            width: 100%;
-            padding: 15px;
-            font-size: 18px;
-            font-weight: bold;
-            color: #fff;
-            background-color: #28a745; /* Un verde para la acción */
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        button:hover {
-            background-color: #218838; /* Verde más oscuro al pasar el ratón */
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Selecciona Estación Adif</title>
+  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    #selectorEstaciones {
+      width: 300px;
+    }
+  </style>
 </head>
 <body>
+  <h1>Selecciona una Estación de Adif</h1>
+  <select id="selectorEstaciones" placeholder="Busca una estación..."></select>
+  <button onclick="irAEstacion()">Ir a la información</button>
 
-    <div class="container">
-        <h1>Consulta de Estaciones de Adif</h1>
-        <p>Elige una estación de la lista para ver la información en tiempo real.</p>
-        
-        <div class="selector-container">
-            <label for="station-select">Estación:</label>
-            <select name="stations" id="station-select">
-                <option value="">Cargando estaciones...</option>
-            </select>
-        </div>
-        
-        <button id="redirect-button">Consultar Horarios</button>
-    </div>
+  <!-- PapaParse para leer CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- Tom Select para buscador -->
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const stationSelect = document.getElementById('station-select');
-            const redirectButton = document.getElementById('redirect-button');
-            
-            // URL original del archivo CSV
-            const originalCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtkTqrlMpZBCZIpFfVfsx3MBhmJjwfl2a1fNlswEu_A1s5JLKCKOIdhkLH1WXOvQ/pub?output=csv';
-            
-            // Usamos un proxy para evitar problemas de CORS
-            const proxyUrl = 'https://api.allorigins.win/raw?url=';
-            const fetchUrl = `${proxyUrl}${encodeURIComponent(originalCsvUrl)}`;
+  <script>
+    async function cargarEstaciones() {
+      const urlCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQtkTqrlMpZBCZIpFfVfsx3MBhmJjwfl2a1fNlswEu_A1s5JLKCKOIdhkLH1WXOvQ/pub?output=csv";
 
-            // Usamos fetch para obtener el archivo CSV a través del proxy
-            fetch(fetchUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('No se pudo cargar el archivo CSV.');
-                    }
-                    return response.text();
-                })
-                .then(csvText => {
-                    stationSelect.innerHTML = '<option value="">-- Elige una estación --</option>';
-                    
-                    const rows = csvText.trim().split('\n');
-                    const headers = rows[0].split(',');
-                    const longNameIndex = headers.indexOf('longName');
-                    const stationCodeIndex = headers.indexOf('stationCode');
+      const response = await fetch(urlCSV);
+      const csvText = await response.text();
 
-                    if (longNameIndex === -1 || stationCodeIndex === -1) {
-                        stationSelect.innerHTML = '<option value="">Error en el formato del CSV</option>';
-                        return;
-                    }
+      const parsed = Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true
+      });
 
-                    for (let i = 1; i < rows.length; i++) {
-                        const columns = rows[i].split(',');
-                        // Usamos trim() para limpiar espacios en blanco que puedan causar errores
-                        const stationName = columns[longNameIndex] ? columns[longNameIndex].trim() : '';
-                        const stationCode = columns[stationCodeIndex] ? columns[stationCodeIndex].trim() : '';
-                        
-                        if (stationName && stationCode) {
-                            const option = document.createElement('option');
-                            option.value = stationCode;
-                            option.textContent = stationName;
-                            stationSelect.appendChild(option);
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error al procesar el CSV:', error);
-                    stationSelect.innerHTML = '<option value="">Error al cargar las estaciones</option>';
-                });
+      const estaciones = parsed.data;
 
-            redirectButton.addEventListener('click', () => {
-                const selectedCode = stationSelect.value;
-                if (selectedCode) {
-                    const targetUrl = `https://info.adif.es/?s=${selectedCode}`;
-                    window.open(targetUrl, '_blank');
-                } else {
-                    alert('Por favor, selecciona una estación de la lista.');
-                }
-            });
-        });
-    </script>
+      const select = document.getElementById("selectorEstaciones");
 
+      estaciones.forEach(estacion => {
+        if (estacion.longName && estacion.stationCode) {
+          const option = document.createElement("option");
+          option.value = estacion.stationCode;
+          option.textContent = estacion.longName;
+          select.appendChild(option);
+        }
+      });
+
+      // Activar Tom Select con búsqueda
+      new TomSelect(select, {
+        create: false,
+        sortField: {
+          field: "text",
+          direction: "asc"
+        }
+      });
+    }
+
+    function irAEstacion() {
+      const select = document.getElementById("selectorEstaciones");
+      const codigo = select.value;
+      if (codigo) {
+        window.location.href = `https://info.adif.es/?s=${codigo}`;
+      }
+    }
+
+    window.onload = cargarEstaciones;
+  </script>
 </body>
 </html>
